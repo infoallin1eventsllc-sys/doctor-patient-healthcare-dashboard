@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "patient_state": {
+      "title": "Patient Clinical EHR State",
+      "description": "Unified dashboard state for patient medical records, vitals, prescriptions, and billing.",
+      "type": "object",
+      "properties": {
+        "patient": {
+          "type": "object",
+          "description": "Demographics and active conditions"
+        },
+        "doctors": {
+          "type": "array",
+          "description": "Available physicians list"
+        },
+        "appointments": {
+          "type": "array",
+          "description": "Scheduled and past consultations"
+        },
+        "vitals": {
+          "type": "array",
+          "description": "Home vital sign tracking logs"
+        },
+        "prescriptions": {
+          "type": "array",
+          "description": "Active and historical medications"
+        },
+        "vaccines": {
+          "type": "array",
+          "description": "Immunization logs"
+        },
+        "labResults": {
+          "type": "array",
+          "description": "Metabolic, lipid and panel results"
+        },
+        "documents": {
+          "type": "array",
+          "description": "Uploaded external clinical PDFs or files"
+        },
+        "invoices": {
+          "type": "array",
+          "description": "Financial ledger and billing status"
+        },
+        "notifications": {
+          "type": "array",
+          "description": "Alert logs"
+        },
+        "emails": {
+          "type": "array",
+          "description": "Delivered HIPAA emails"
+        },
+        "smsLogs": {
+          "type": "array",
+          "description": "SMS alert records"
+        }
+      },
+      "required": ["patient", "appointments", "vitals"]
+    }
+  },
+  "firestore": {
+    "/patient_states/{stateId}": {
+      "schema": "patient_state",
+      "description": "Unified patient medical files sync collection."
+    }
+  }
+}
