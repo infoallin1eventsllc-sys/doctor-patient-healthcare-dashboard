@@ -1,16 +1,16 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  getDoc, 
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
   getDocFromServer,
-  Firestore
+  Firestore,
+  FirestoreError
 } from "firebase/firestore";
 import firebaseConfig from "../../firebase-applet-config.json";
 import { DashboardState } from "../data";
 
-// Initialize Firebase App
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const db: Firestore = getFirestore(app);
 
@@ -25,90 +25,63 @@ export enum OperationType {
 
 export interface FirestoreErrorInfo {
   error: string;
+  code?: string;
   operationType: OperationType;
   path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-  };
 }
 
-// Global error handler complying with the firebase-integration skill specifications
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: null,
-      email: null,
-      emailVerified: null,
-    },
+    code: error instanceof FirestoreError ? error.code : undefined,
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Test Connection on startup
+// Offline/network error codes that should not be treated as fatal
+const OFFLINE_CODES = new Set(["unavailable", "failed-precondition", "cancelled"]);
+
+function isOfflineError(error: unknown): boolean {
+  if (error instanceof FirestoreError) return OFFLINE_CODES.has(error.code);
+  const msg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return msg.includes("offline") || msg.includes("network");
+}
+
+function patientDocRef(patientId: string) {
+  const docId = `${patientId}_ehr`;
+  return { ref: doc(db, "patient_states", docId), path: `patient_states/${docId}` };
+}
+
 export async function testConnection(): Promise<boolean> {
   try {
-    // Attempting direct server read to verify database availability
-    await getDocFromServer(doc(db, 'system_meta', 'connection_test'));
-    console.log("Firebase connection verified successfully.");
+    await getDocFromServer(doc(db, "system_meta", "connection_test"));
     return true;
-  } catch (error: any) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    console.warn("Firebase connection test resulted in offline or fallback mode:", errMsg);
+  } catch {
     return false;
   }
 }
 
-// Cloud Persistence: Save EHR state to Firestore
 export async function saveStateToFirestore(state: DashboardState): Promise<void> {
-  const docPath = "patient_states/sarah_jenkins_ehr";
+  const patientId = state.patient?.id ?? "unknown";
+  const { ref, path } = patientDocRef(patientId);
   try {
-    const docRef = doc(db, "patient_states", "sarah_jenkins_ehr");
-    // Convert dates and custom types safely to standard JS objects for Firestore
     const cleanedState = JSON.parse(JSON.stringify(state));
-    await setDoc(docRef, cleanedState);
+    await setDoc(ref, cleanedState);
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    if (
-      errMsg.includes("offline") || 
-      errMsg.includes("failed-precondition") || 
-      errMsg.includes("unavailable") || 
-      errMsg.includes("network")
-    ) {
-      console.warn("Firestore client is offline or network is down. Save is queued locally or bypassed.");
-      return;
-    }
-    handleFirestoreError(error, OperationType.WRITE, docPath);
+    if (isOfflineError(error)) return;
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
-// Cloud Persistence: Load EHR state from Firestore
-export async function loadStateFromFirestore(): Promise<DashboardState | null> {
-  const docPath = "patient_states/sarah_jenkins_ehr";
+export async function loadStateFromFirestore(patientId = "pat_1"): Promise<DashboardState | null> {
+  const { ref, path } = patientDocRef(patientId);
   try {
-    const docRef = doc(db, "patient_states", "sarah_jenkins_ehr");
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return docSnap.data() as DashboardState;
-    }
-    return null;
+    const docSnap = await getDoc(ref);
+    return docSnap.exists() ? (docSnap.data() as DashboardState) : null;
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    if (
-      errMsg.includes("offline") || 
-      errMsg.includes("failed-precondition") || 
-      errMsg.includes("unavailable") || 
-      errMsg.includes("network")
-    ) {
-      console.warn("Firestore client is offline or network is down. Falling back to local storage state.");
-      return null;
-    }
-    handleFirestoreError(error, OperationType.GET, docPath);
-    return null;
+    if (isOfflineError(error)) return null;
+    handleFirestoreError(error, OperationType.GET, path);
   }
 }

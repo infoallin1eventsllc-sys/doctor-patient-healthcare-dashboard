@@ -56,7 +56,7 @@ export default function SecureMessaging({ state, onChangeState }: SecureMessagin
     const newMsg: Message = {
       id: `msg_${Date.now()}`,
       conversationId: activeConvId,
-      senderId: "pat_1",
+      senderId: state.patient.id,
       senderRole: "patient",
       text: typedMessage.trim(),
       timestamp: new Date().toISOString(),

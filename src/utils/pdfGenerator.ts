@@ -536,12 +536,12 @@ export function generateHealthSummaryPDF(state: DashboardState) {
   doc.setFontSize(7.5);
   doc.setTextColor(110, 110, 110);
   doc.text(`This document has been securely generated and cryptographically certified by Seattle Clinical Group.`, 18, vy + 4.5);
-  doc.text(`Electronic Integrity Security Hash Code: SHA256-${Math.random().toString(36).substring(2, 12).toUpperCase()} • SSL TLS 1.3 Envelope`, 18, vy + 8.5);
+  doc.text(`Document Reference ID: ${Date.now().toString(36).toUpperCase()} • Generated ${new Date().toISOString()}`, 18, vy + 8.5);
   doc.text("NPI Clinical Partner Identifier #14092471 • Fully complies with the 21st Century Cures Act OpenNotes guidelines.", 18, vy + 12.5);
 
   drawFooter(pageNum);
 
   // Download PDF
-  const safeFilename = (patient?.name || "Patient").replace(/\s+/g, "_");
+  const safeFilename = (patient?.name || "Patient").replace(/[^a-zA-Z0-9_-]/g, "_");
   doc.save(`${safeFilename}_EHR_Health_Summary_Report.pdf`);
 }

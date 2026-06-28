@@ -15,6 +15,7 @@ import {
   EmailRecord,
   SmsRecord
 } from "./types";
+import { saveStateToFirestore } from "./utils/firebaseDb";
 
 // Standard formatting helpers
 export const formatDate = (date: Date): string => {
@@ -664,8 +665,8 @@ export const getInitialState = (): DashboardState => {
         if (!parsed.emails) parsed.emails = mockEmails;
         if (!parsed.smsLogs) parsed.smsLogs = mockSmsLogs;
         return parsed;
-      } catch (e) {
-        console.error("Failed to parse stored CarePulse state, resetting.", e);
+      } catch {
+        // Corrupted localStorage entry — fall through to default state
       }
     }
   }
@@ -690,14 +691,12 @@ export const getInitialState = (): DashboardState => {
   };
 };
 
-import { saveStateToFirestore } from "./utils/firebaseDb";
-
 export const saveState = (state: DashboardState) => {
   if (typeof window !== "undefined") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
   // Persist to Cloud Firestore as fallback
-  saveStateToFirestore(state).catch(err => {
-    console.error("Failed to persist state to Cloud Firestore:", err);
+  saveStateToFirestore(state).catch(() => {
+    // Firestore unavailable — localStorage is the source of truth
   });
 };

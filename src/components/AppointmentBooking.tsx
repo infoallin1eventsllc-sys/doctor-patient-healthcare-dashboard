@@ -96,7 +96,7 @@ export default function AppointmentBooking({
       id: apptId,
       patientId: patient.id,
       patientName: patient.name,
-      patientAge: 38,
+      patientAge: patient.dateOfBirth ? new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear() : 0,
       patientGender: patient.gender,
       doctorId: selectedDoctor.id,
       doctorName: selectedDoctor.name,

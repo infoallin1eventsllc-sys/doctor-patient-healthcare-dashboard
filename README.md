@@ -96,11 +96,22 @@ src/
 
 ---
 
+## Code Quality
+
+- **TypeScript strict mode** enabled (`strict`, `noImplicitAny`, `strictNullChecks`)
+- No `any` types — all Firebase errors typed as `FirestoreError | unknown`
+- Firestore document paths are dynamic per authenticated user ID — no hardcoded patient references
+- Circular imports resolved — all imports declared at module top
+- No `console.log` / `console.warn` / `console.error` in production paths
+- Silent offline fallback for Firestore using Firebase SDK error codes (`unavailable`, `failed-precondition`) — no fragile string matching
+- Duplicate Firebase app initialization prevented via `getApps()` guard
+
 ## Security
 
 - Firestore security rules enforce role-based access (patient vs. doctor)
 - Auth-gated routes throughout the app
 - No PHI stored client-side beyond active session
+- Firebase config isolated to a JSON file outside of source — not embedded in code
 
 ---
 

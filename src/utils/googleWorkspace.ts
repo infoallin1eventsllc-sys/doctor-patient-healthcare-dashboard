@@ -1,15 +1,14 @@
-import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  onAuthStateChanged, 
-  User 
+import { initializeApp, getApps, getApp } from "firebase/app";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  User
 } from "firebase/auth";
 import firebaseConfig from "../../firebase-applet-config.json";
 
-// Initialize Firebase App lazily or directly.
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
@@ -55,8 +54,7 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     }
     cachedAccessToken = credential.accessToken;
     return { user: result.user, accessToken: cachedAccessToken };
-  } catch (error: any) {
-    console.error("Workspace Auth Error:", error);
+  } catch (error: unknown) {
     throw error;
   } finally {
     isSigningIn = false;
@@ -121,14 +119,14 @@ export async function createGoogleDoc(title: string, contentMarkdown: string): P
 
   if (!updateRes.ok) {
     const errData = await updateRes.json().catch(() => ({}));
-    console.warn("Docs write error:", errData);
+    throw new Error(errData?.error?.message || `Failed to write content to Google Doc. Status ${updateRes.status}`);
   }
 
   return { documentId, alternateLink };
 }
 
 // 2. Google Sheets - Create and Write Spreadsheet
-export async function createGoogleSheet(title: string, headers: string[], rows: any[][]): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
+export async function createGoogleSheet(title: string, headers: string[], rows: (string | number | boolean | null)[][]): Promise<{ spreadsheetId: string; spreadsheetUrl: string }> {
   const token = await getAccessToken();
   if (!token) throw new Error("Unauthorized: Please sign in with Google first.");
 
@@ -175,7 +173,7 @@ export async function createGoogleSheet(title: string, headers: string[], rows: 
 
   if (!writeRes.ok) {
     const errData = await writeRes.json().catch(() => ({}));
-    console.warn("Sheets write error:", errData);
+    throw new Error(errData?.error?.message || `Failed to write data to Google Sheet. Status ${writeRes.status}`);
   }
 
   return { spreadsheetId, spreadsheetUrl };
@@ -207,7 +205,6 @@ export async function listWorkspaceFiles(): Promise<DriveFile[]> {
   });
 
   if (!res.ok) {
-    console.warn("Failed to list Drive files:", res.status);
     return [];
   }
 

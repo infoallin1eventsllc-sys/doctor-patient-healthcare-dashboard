@@ -51,10 +51,9 @@ export default function App() {
           setState(cloudState);
           // Sync to localStorage
           localStorage.setItem("CAREPULSE_DASHBOARD_STATE", JSON.stringify(cloudState));
-          console.log("Successfully loaded synced patient clinical state from Cloud Firestore database.");
         }
       } catch (err) {
-        console.warn("Cloud database synchronization fallback applied:", err);
+        // Silent fallback to localStorage state — Firestore unavailable
       } finally {
         setDbLoading(false);
       }
